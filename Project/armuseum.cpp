@@ -1,157 +1,286 @@
-// This program reads a model image, a video and a patch image, and overlays the patch on the model object in the video frames.
-
-// (c) Realidad Virtual y Aumentada - Universidad de Cordoba - Manuel J. Marin-Jimenez
-
-#include <iostream>
 #include <opencv2/opencv.hpp>
 #include <opencv2/calib3d.hpp>
-
+#include <iostream>
+#include <algorithm>
 #include "rva.h"
 
 using namespace std;
 
+static bool isNumber(const string &s)
+{
+    return !s.empty() && all_of(s.begin(), s.end(), ::isdigit);
+}
+
+static bool hasExtension(const string &s, const vector<string> &exts)
+{
+    string lower = s;
+    transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    for (const auto &e : exts)
+        if (lower.size() >= e.size() && lower.compare(lower.size() - e.size(), e.size(), e) == 0)
+            return true;
+    return false;
+}
+
 const cv::String keys =
-"{help h usage ? |      | print this message   }"
-"{@model         |<none>| Path to image model.}"
-"{@scene         |<none>| Path to image scene.}"
-"{patch         |<none>| Path to image patch.}"
-"{video         |<none>| Path to playable video.}"
-;
+    "{help h usage ? |      | muestra esta ayuda }"
+    "{@model         |<none>| Ruta de la imagen modelo }"
+    "{@scene         |<none>| Ruta de la escena (imagen, vídeo o índice de cámara) }"
+    "{patch          |      | (opcional) Imagen patch a incrustar }"
+    "{video          |      | (opcional) Segundo vídeo o índice de cámara }"
+    "{detector d     |orb   | Detector: orb|sift|akaze|brisk }";
 
-// Main function
-int main(int argc, char ** argv) {
-
-    // Get the arguments: model, video and patch using OpenCv parser
+int main(int argc, char **argv)
+{
     cv::CommandLineParser parser(argc, argv, keys);
-    if (parser.has("help")) {
+    parser.about("ARBlockMuseum 2025");
+    if (parser.has("help") || argc < 3)
+    {
         parser.printMessage();
+        cerr << "\nEjemplos:\n"
+             << "  ./armuseum cuadro.jpg escena.mp4 --patch=logo.png\n"
+             << "  ./armuseum cuadro.jpg escena.mp4 0\n";
         return 0;
     }
+
     string model_path = parser.get<string>(0);
     string scene_path = parser.get<string>(1);
-    
-    // Patch argument is available?
     string patch_path = parser.get<string>("patch");
-
-    // Second video argument is available?
     string video_path = parser.get<string>("video");
+    string detectorType = parser.get<string>("detector");
 
-    // Video2 has priority over patch
     bool use_video = !video_path.empty();
     bool use_patch = !patch_path.empty() && !use_video;
+    bool use_info = !use_patch && !use_video;
 
-    bool use_info_text = !use_video && !use_patch;
-    // *** TODO: define tu texto aqui ***
-    std::vector<cv::String> info_text;
-    // info_text.push_back("Titulo: abc");
-
-    // Load the images in color
     cv::Mat img_model = cv::imread(model_path, cv::IMREAD_COLOR);
+    if (img_model.empty())
+    {
+        cerr << "Error: modelo no cargado: " << model_path << endl;
+        return -1;
+    }
+    cv::resize(img_model, img_model, cv::Size(), 0.5, 0.5);
 
     cv::Mat img_patch;
     if (use_patch)
+    {
         img_patch = cv::imread(patch_path, cv::IMREAD_COLOR);
-
-    // Check if the images are loaded
-    // *** TODO: COMPLETAR ***
-
-    // Change resolution of the image model to half
-    cv::resize(img_model, img_model, cv::Size(), 0.5, 0.5);
-
-    // Resize the patch to the size of the model
-    if (use_patch)
-        cv::resize(img_patch, img_patch, img_model.size());
-
-    // Load the scene image
-    // *** TODO : COMPLETAR ***
-    cv::Mat img_scene;
-
-    // If use video, create the video capture
-    cv::VideoCapture cap2;
-    if (use_video) {
-            // Check if video_path is a the webcam index and open it
-            // *** TODO: COMPLETAR ***
+        if (img_patch.empty())
+        {
+            cerr << "Error: patch no cargado: " << patch_path << endl;
+            return -1;
         }
-        else    
-            // Open video file to display
-            // *** TODO: COMPLETAR ***
-        
-        if (!cap2.isOpened()) {
-            cout << "Error: video not loaded: " + video_path << endl;
+        cv::resize(img_patch, img_patch, img_model.size());
+    }
+
+    cv::VideoCapture cap2;
+    if (use_video)
+    {
+        if (isNumber(video_path))
+            cap2.open(stoi(video_path));
+        else
+            cap2.open(video_path);
+        if (!cap2.isOpened())
+        {
+            cerr << "Error: vídeo2 no cargado: " << video_path << endl;
             return -1;
         }
     }
 
-    // Pre-compute keypoints and descriptors for the model image
-    std::vector<cv::KeyPoint> keypoints_model;
-    cv::Mat descriptors_model;
-    rva_calculaKPsDesc(img_model, keypoints_model, descriptors_model);
+    cv::VideoCapture cap1;
+    cv::Mat img_scene;
+    bool sceneIsVideo = false;
 
-    // For the scene image, detect the object and overlay the patch    
-
-    // To speed up processing, resize the image to half
-    cv::resize(img_scene, img_scene, cv::Size(), 0.5, 0.5);
-
-    // Compute keypoints and descriptors for the scene image
-    std::vector<cv::KeyPoint> keypoints_scene;
-    cv::Mat descriptors_scene;
-    rva_calculaKPsDesc(img_scene, keypoints_scene, descriptors_scene);
-
-    // Match the descriptors
-    std::vector<cv::DMatch> matches;
-    rva_matchDesc(descriptors_model, descriptors_scene, matches);
-
-	// Filter out outliers
-	// *** TODO: COMPLETAR ***
-	// rva_filterMatches(...)
-
-    // Compute the bounding-box of the model in the scene
-    cv::Mat H;
-    std::vector<cv::Point2f> pts_obj_in_scene;
-    rva_localizaObj(img_model, img_scene, keypoints_model, keypoints_scene, matches, H, pts_obj_in_scene);
-
-    // Draw the bounding-box 
-	if (use_info_text)	
-		rva_draw_contour(img_scene, pts_obj_in_scene, cv::Scalar(0, 255, 0), 4);
-    
-    if (use_info_text)
+    if (isNumber(scene_path))
     {
-        rva_mostrarInfo(img_scene, info_text, pts_obj_in_scene);
-   
-        // Show the result
-        cv::imshow("AugmentedReality-Info", img_scene);
+        cap1.open(stoi(scene_path));
+        sceneIsVideo = cap1.isOpened();
+    }
+    else
+    {
+        string lower_path = scene_path;
+        transform(lower_path.begin(), lower_path.end(), lower_path.begin(), ::tolower);
 
-        // Check pressed keys to take action
-        // *** TODO: COMPLETAR ***
-        cv::waitKey(0);
+        bool isVideoFile = (lower_path.find(".mp4") != string::npos ||
+                            lower_path.find(".avi") != string::npos ||
+                            lower_path.find(".mov") != string::npos ||
+                            lower_path.find(".mkv") != string::npos);
+
+        if (isVideoFile)
+        {
+            cap1.open(scene_path);
+            sceneIsVideo = cap1.isOpened();
+        }
+    }
+
+    if (!sceneIsVideo)
+    {
+        img_scene = cv::imread(scene_path, cv::IMREAD_COLOR);
+        if (img_scene.empty())
+        {
+            cerr << "Error: escena no cargada: " << scene_path << endl;
+            return -1;
+        }
+        cv::resize(img_scene, img_scene, cv::Size(), 0.5, 0.5);
+    }
+
+    vector<cv::KeyPoint> kps_model;
+    cv::Mat desc_model;
+    rva_calculaKPsDesc(img_model, kps_model, desc_model, detectorType);
+
+    vector<cv::String> info_text = {
+        "Título: Ejemplo de cuadro",
+        "Autor: Desconocido",
+        "Año: 1889"};
+
+    if (sceneIsVideo)
+    {
+        cv::Mat frame;
+        while (cap1.read(frame))
+        {
+            if (frame.empty())
+                break;
+            cv::Mat frame_small;
+            cv::resize(frame, frame_small, cv::Size(), 0.5, 0.5);
+
+            vector<cv::KeyPoint> kps_scene;
+            cv::Mat desc_scene;
+            rva_calculaKPsDesc(frame_small, kps_scene, desc_scene, detectorType);
+
+            vector<cv::DMatch> matches;
+            rva_matchDesc(desc_model, desc_scene, matches);
+            vector<cv::DMatch> good;
+            rva_filterMatches(matches, kps_model, kps_scene, good);
+
+            cv::Mat H;
+            vector<cv::Point2f> objCorners;
+            rva_localizaObj(img_model, frame_small, kps_model, kps_scene, good, H, objCorners);
+
+            cv::Mat frame_out;
+            if (!H.empty())
+            {
+                if (use_video)
+                {
+                    cv::Mat frame2;
+                    if (!cap2.read(frame2))
+                    {
+                        cap2.set(cv::CAP_PROP_POS_FRAMES, 0);
+                        cap2.read(frame2);
+                    }
+                    if (!frame2.empty())
+                    {
+                        cv::resize(frame2, frame2, img_model.size());
+                        rva_dibujaPatch(frame_small, frame2, H, frame_out);
+                    }
+                    else
+                        frame_small.copyTo(frame_out);
+                }
+                else if (use_patch)
+                {
+                    rva_dibujaPatch(frame_small, img_patch, H, frame_out);
+                }
+                else if (use_info)
+                {
+                    rva_draw_contour(frame_small, objCorners, cv::Scalar(0, 255, 0), 4);
+                    rva_mostrarInfo(frame_small, info_text, objCorners);
+                    frame_small.copyTo(frame_out);
+                }
+            }
+            else
+            {
+                frame_small.copyTo(frame_out);
+            }
+
+            cv::imshow("AR-Scene", frame_out);
+            char k = (char)cv::waitKey(10);
+            if (k == 27 || k == 'q')
+                break;
+            if (k == 's')
+                cv::imwrite("captura.png", frame_out);
+        }
+        cv::destroyAllWindows();
+        return 0;
+    }
+
+    vector<cv::KeyPoint> kps_scene;
+    cv::Mat desc_scene;
+    rva_calculaKPsDesc(img_scene, kps_scene, desc_scene, detectorType);
+
+    vector<cv::DMatch> matches;
+    rva_matchDesc(desc_model, desc_scene, matches);
+    vector<cv::DMatch> good;
+    rva_filterMatches(matches, kps_model, kps_scene, good);
+
+    cv::Mat H;
+    vector<cv::Point2f> objCorners;
+    rva_localizaObj(img_model, img_scene, kps_model, kps_scene, good, H, objCorners);
+
+    cv::Mat img_out;
+    img_scene.copyTo(img_out);
+
+    if (use_video)
+    {
+        while (true)
+        {
+            cv::Mat frame2;
+            if (!cap2.read(frame2))
+            {
+                cap2.set(cv::CAP_PROP_POS_FRAMES, 0);
+                cap2.read(frame2);
+            }
+            if (frame2.empty())
+                break;
+
+            cv::resize(frame2, frame2, img_model.size());
+
+            if (!H.empty())
+                rva_dibujaPatch(img_scene, frame2, H, img_out);
+
+            cv::imshow("AR-Static+Video", img_out);
+            char k = (char)cv::waitKey(10);
+            if (k == 27 || k == 'q')
+                break;
+            if (k == 's')
+                cv::imwrite("captura.png", img_out);
+        }
     }
     else if (use_patch)
     {
-        rva_dibujaPatch(img_scene, img_patch, H, img_scene);
+        if (!H.empty())
+            rva_dibujaPatch(img_scene, img_patch, H, img_out);
+        else
+            cout << "Advertencia: No se encontró homografía. Mostrando imagen original.\n";
 
-        // Show the result
-        cv::imshow("AugmentedReality-Patch", img_scene);
-
-        // Check pressed keys to take action
-        // *** TODO: COMPLETAR ***
-        cv::waitKey(0);         
-    }
-    else {
-        // Grab frames from the video and overlay the frame on the object region
-        cv::Mat frame;
-        while (cap2.read(frame)) {
-            // Warp the read frame to the object region and overlay it
-            // *** TODO: COMPLETAR ***
-
-            // Show the result
-            // *** TODO: COMPLETAR ***
+        cv::imshow("AugmentedReality-Patch", img_out);
+        while (true)
+        {
+            char k = (char)cv::waitKey(0);
+            if (k == 27 || k == 'q')
+                break;
+            if (k == 's')
+                cv::imwrite("captura.png", img_out);
         }
     }
-        
-    // The camera will be deinitialized automatically in VideoCapture destructor
-	cv::destroyAllWindows();
-    if (cap2.isOpened())
-        cap2.release();
-	
+    else if (use_info)
+    {
+        if (!H.empty())
+        {
+            rva_draw_contour(img_out, objCorners, cv::Scalar(0, 255, 0), 4);
+            rva_mostrarInfo(img_out, info_text, objCorners);
+        }
+        else
+            cout << "Advertencia: No se encontró homografía. Mostrando imagen original.\n";
+
+        cv::imshow("AugmentedReality-Info", img_out);
+        while (true)
+        {
+            char k = (char)cv::waitKey(0);
+            if (k == 27 || k == 'q')
+                break;
+            if (k == 's')
+                cv::imwrite("captura.png", img_out);
+        }
+    }
+
+    cv::destroyAllWindows();
     return 0;
 }

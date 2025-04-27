@@ -21,7 +21,8 @@ void rva_deform_image(const cv::Mat& im_input, cv::Mat & im_output, cv::Mat homo
 //! \param img: input image
 //! \param keypoints: vector of keypoints
 //! \param descriptors: matrix of descriptors
-void rva_calculaKPsDesc(const cv::Mat &img, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
+//! \param detector «orb» (def.), «sift», «akaze» o «brisk»
+void rva_calculaKPsDesc(const cv::Mat &img, std::vector<cv::KeyPoint> &kps, cv::Mat &descriptors, const std::string &detector = "orb");
 
 //! This function matches two sets of descriptors
 //! \param descriptors1: matrix of descriptors of the first image
