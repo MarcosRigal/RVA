@@ -26,8 +26,7 @@ const cv::String keys =
     "{@model         |<none>| Ruta de la imagen modelo }"
     "{@scene         |<none>| Ruta de la escena (imagen, vídeo o índice de cámara) }"
     "{patch          |      | (opcional) Imagen patch a incrustar }"
-    "{video          |      | (opcional) Segundo vídeo o índice de cámara }"
-    "{detector d     |orb   | Detector: orb|sift|akaze|brisk }";
+    "{video          |      | (opcional) Segundo vídeo o índice de cámara }";
 
 int main(int argc, char **argv)
 {
@@ -46,7 +45,6 @@ int main(int argc, char **argv)
     string scene_path = parser.get<string>(1);
     string patch_path = parser.get<string>("patch");
     string video_path = parser.get<string>("video");
-    string detectorType = parser.get<string>("detector");
 
     bool use_video = !video_path.empty();
     bool use_patch = !patch_path.empty() && !use_video;
@@ -125,7 +123,7 @@ int main(int argc, char **argv)
 
     vector<cv::KeyPoint> kps_model;
     cv::Mat desc_model;
-    rva_calculaKPsDesc(img_model, kps_model, desc_model, detectorType);
+    rva_calculaKPsDesc(img_model, kps_model, desc_model);
 
     vector<cv::String> info_text = {
         "Título: Ejemplo de cuadro",
@@ -144,7 +142,7 @@ int main(int argc, char **argv)
 
             vector<cv::KeyPoint> kps_scene;
             cv::Mat desc_scene;
-            rva_calculaKPsDesc(frame_small, kps_scene, desc_scene, detectorType);
+            rva_calculaKPsDesc(frame_small, kps_scene, desc_scene);
 
             vector<cv::DMatch> matches;
             rva_matchDesc(desc_model, desc_scene, matches);
@@ -203,7 +201,7 @@ int main(int argc, char **argv)
 
     vector<cv::KeyPoint> kps_scene;
     cv::Mat desc_scene;
-    rva_calculaKPsDesc(img_scene, kps_scene, desc_scene, detectorType);
+    rva_calculaKPsDesc(img_scene, kps_scene, desc_scene);
 
     vector<cv::DMatch> matches;
     rva_matchDesc(desc_model, desc_scene, matches);
