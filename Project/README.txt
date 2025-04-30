@@ -20,14 +20,17 @@ Genera el ejecutable `armuseum`.
 ./armuseum <model> <scene> [--patch=<img>] [--video=<vid|camIndex>]
 
 Ejemplos:
-1) Imagen + parche estático
-   ./armuseum data/cuadro.jpg data/foto_escena.jpg --patch=data/logo.png
+1) Imagen + texto
+   ./armuseum ../data/model.jpg ../data/scene3.jpg 
 
-2) Vídeo escena + vídeo virtual
-   ./armuseum data/cuadro.jpg data/galeria.mp4 --video=data/clip.mp4
+2) Imagen + parche estático
+   ./armuseum ../data/model.jpg ../data/scene3.jpg --patch=../data/scene1.jpeg
 
-3) Cámara web como escena y como contenido virtual (índice 0 y 1)
-   ./armuseum data/cuadro.jpg 0 --video=1
+3) Imagen + vídeo virtual
+   ./armuseum ../data/model.jpg ../data/scene3.jpg --video=../data/scene8.mp4
+
+4) Imagen + Cámara web como contenido virtual (índice 0)
+   ./armuseum ../data/model.jpg ../data/scene3.jpg  --video=0
 
 Teclas en ejecución
 -------------------
