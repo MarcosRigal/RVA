@@ -11,7 +11,7 @@ cv::Mat rva_compute_homography(std::vector<cv::Point2f> points_image1, std::vect
 
 void rva_draw_contour(cv::Mat image, std::vector<cv::Point2f> points, cv::Scalar color, int thickness);
 
-void rva_deform_image(const cv::Mat &im_input, cv::Mat &im_output, cv::Mat homography);
+void rva_deform_image(const cv::Mat& im_input, cv::Mat & im_output, cv::Mat homography);
 
 // ======================
 // Functions for task 2
@@ -21,7 +21,7 @@ void rva_deform_image(const cv::Mat &im_input, cv::Mat &im_output, cv::Mat homog
 //! \param img: input image
 //! \param keypoints: vector of keypoints
 //! \param descriptors: matrix of descriptors
-void rva_calculaKPsDesc(const cv::Mat &img, std::vector<cv::KeyPoint> &kps, cv::Mat &descriptors);
+void rva_calculaKPsDesc(const cv::Mat &img, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
 
 //! This function matches two sets of descriptors
 //! \param descriptors1: matrix of descriptors of the first image
@@ -65,7 +65,7 @@ void rva_localizaObj(const cv::Mat &img1, const cv::Mat &img2, const std::vector
 //! \param keypoints_scene: vector of keypoints of the scene image
 //! \param good_matches: output vector of good matches
 
-void rva_filterMatches(const std::vector<cv::DMatch> &matches, const std::vector<cv::KeyPoint> &keypoints_model, const std::vector<cv::KeyPoint> &keypoints_scene, std::vector<cv::DMatch> &good_matches);
+void rva_filterMatches(const std::vector<cv::DMatch> & matches, const std::vector<cv::KeyPoint> & keypoints_model, const std::vector<cv::KeyPoint> & keypoints_scene, std::vector<cv::DMatch> & good_matches);
 
 //! This function draws the patch on the scene image
 //! \param scene: scene image
@@ -75,13 +75,13 @@ void rva_filterMatches(const std::vector<cv::DMatch> &matches, const std::vector
 //! \pre homography must be computed with rva_compute_homography
 //! \pre patch must have the same size as the obj image (used to compute the homography)
 
-void rva_dibujaPatch(const cv::Mat &scene, const cv::Mat &patch, const cv::Mat &homography, cv::Mat &output);
+void rva_dibujaPatch(const cv::Mat & scene, const cv::Mat & patch, const cv::Mat & homography, cv::Mat & output);
 
 //! This function shows the information of the object in the scene image
 //! \param image: scene image
 //! \param info: vector of strings with the information
 //! \param vertices: vector of points of the object contour
 
-void rva_mostrarInfo(cv::Mat &image, const std::vector<cv::String> &info, const std::vector<cv::Point2f> &vertices);
+void rva_mostrarInfo(cv::Mat& image, const std::vector<cv::String>& info, const std::vector<cv::Point2f>& vertices);
 
 #endif
